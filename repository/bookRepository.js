@@ -34,26 +34,45 @@ export async function getBookById(key) {
 
 // GET: book in collection by its title
 export async function searchBooksByTitle(bookTitle) {
-
-  console.log(bookTitle)
   try {
-    const test = 'C in 21 days';
-    // custom query with parameters
-    var querystr = `SELECT title FROM books WHERE title LIKE '%'||$1||'%';`
-    // var options = { parameters: {TITLE: bookTitle}}
-    const query = `
-        SELECT title
-        FROM books
-        WHERE title = 'C in 21 days';
-      `
-      const options = { parameters: [bookTitle] }
+    // custom query, looks for book titles to match any part of the params
+    // turning all search string to lowercase
+    var query = `
+      SELECT META().id, * 
+      FROM books 
+      WHERE LOWER(title) 
+      LIKE '%'||LOWER($BOOKTITLE)||'%';`;
+    const options = { parameters: { BOOKTITLE: bookTitle } }
     const cluster = await couchbaseConnect();
     const bucket = getBucket(cluster);
     const scope = bucket.defaultScope();
     // use custom query
-    const results = await scope.query(querystr, options);
-    console.log(results)
-    return results.rows;
+    const results = await scope.query(query, options);
+    // create and return book array as per docs
+    return results.rows.map(book => {return {...book.books, id: book.id}})
+  }catch(error) {
+    console.error(error);
+  }
+}
+
+// GET: book in collection by author name
+export async function searchBooksByAuthor(author) {
+  try {
+    // custom query, looks for book author which matches any part of the params
+    // all search strings turned to lowercase
+    var query = `
+      SELECT META().id, * 
+      FROM books 
+      WHERE LOWER(author) 
+      LIKE '%'||LOWER($AUTHORNAME)||'%';`;
+    const options = { parameters: { AUTHORNAME: author } }
+    const cluster = await couchbaseConnect();
+    const bucket = getBucket(cluster);
+    const scope = bucket.defaultScope();
+    // use custom query
+    const results = await scope.query(query, options);
+    // create and return book array as per docs
+    return results.rows.map(book => {return {...book.books, id: book.id}})
   }catch(error) {
     console.error(error);
   }
